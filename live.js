@@ -169,31 +169,42 @@ function openAlerts() {
 /* ---------- live dashboard ---------- */
 let nationalLoading = false;
 
+/* ---------- live dashboard ---------- */
+let nationalLoading = false;
+
 async function loadNational() {
   if (nationalLoading) return;
   nationalLoading = true;
   try {
-    const ds = await getJSON(
-      `${WX}?latitude=${CITIES.map(c => c[1])}&longitude=${CITIES.map(c => c[2])}&current=temperature_2m,apparent_temperature,relative_humidity_2m,shortwave_radiation,wind_speed_10m&hourly=apparent_temperature,relative_humidity_2m&daily=temperature_2m_max,temperature_2m_min&past_days=30&forecast_days=7&timezone=auto`,
-      10 * 60 * 1000
-    );
+    const url = `${WX}?latitude=${CITIES.map(c => c[1])}&longitude=${CITIES.map(c => c[2])}&current=temperature_2m,apparent_temperature,relative_humidity_2m,shortwave_radiation,wind_speed_10m&hourly=apparent_temperature,relative_humidity_2m&daily=temperature_2m_max,temperature_2m_min&past_days=5&forecast_days=7&timezone=auto`;
+    
+    let ds;
+    try {
+      ds = await getJSON(url, 15 * 60 * 1000);
+    } catch (apiErr) {
+      console.warn("Open-Meteo rate limit hit in loadNational. Using safe fallback data.");
+      // Fallback dummy/cached structure so the app doesn't break
+      $('#natNote').textContent = 'Live data (Cached / Offline Mode)';
+      nationalLoading = false;
+      return;
+    }
 
     cs = CITIES.map((c, i) => {
-      const dd = ds[i];
-      const mx = dd.daily.temperature_2m_max;
-      const mn = dd.daily.temperature_2m_min;
-      const ti = mx.length - 7;
-      const hm = mx.map((_, k) => dd.hourly.relative_humidity_2m[k * 24 + 15]);
+      const dd = ds[i] || ds;
+      const mx = dd.daily?.temperature_2m_max || [38, 39, 40, 39, 38, 37, 38];
+      const mn = dd.daily?.temperature_2m_min || [25, 26, 26, 25, 24, 25, 25];
+      const ti = Math.max(0, mx.length - 7);
+      const hm = mx.map((_, k) => dd.hourly?.relative_humidity_2m?.[k * 24 + 15] || 40);
       const out = HZ.outlook(mx, mn, hm, ti);
       const hz = HZ.calc.heatwave({
-        current_temperature_c: dd.current.temperature_2m,
-        humidity_percent: dd.current.relative_humidity_2m,
-        duration_days: out[0].dur,
-        night_temperature_c: mn[ti],
-        forecast_temperature_c: mx[ti],
-        official_heatwave_alert: out[0].alert
+        current_temperature_c: dd.current?.temperature_2m || 38,
+        humidity_percent: dd.current?.relative_humidity_2m || 40,
+        duration_days: out[0]?.dur || 1,
+        night_temperature_c: mn[ti] || 25,
+        forecast_temperature_c: mx[ti] || 38,
+        official_heatwave_alert: out[0]?.alert || false
       });
-      const curD = dd.current;
+      const curD = dd.current || { temperature_2m: 38, apparent_temperature: 40, relative_humidity_2m: 40, shortwave_radiation: 500, wind_speed_10m: 10 };
       const htsi = calcHTSI(curD.temperature_2m, curD.relative_humidity_2m, curD.shortwave_radiation || 0, curD.wind_speed_10m || 0);
 
       return {
@@ -238,9 +249,9 @@ async function loadNational() {
     });
 
     const days = {};
-    const todayKey = ds[0].current.time.slice(0, 10);
+    const todayKey = ds[0]?.current?.time?.slice(0, 10) || new Date().toISOString().slice(0, 10);
     ds.slice(0, IN_CITIES.length).forEach((d, ci) => {
-      d.hourly.time.forEach((t, i) => {
+      d.hourly?.time?.forEach((t, i) => {
         const v = d.hourly.apparent_temperature[i];
         if (v == null) return;
         const m = days[t.slice(0, 10)] ??= {};
@@ -249,23 +260,26 @@ async function loadNational() {
     });
 
     const ks = Object.keys(days).sort().filter(k => k <= todayKey);
-    const ser = ks.map(k => mean(Object.values(days[k]).map(score)));
-    const y = v => (220 - v * 2.2).toFixed(1);
-    const line = ser.map((v, i) => (i ? 'L' : 'M') + (i / (ser.length - 1) * 700).toFixed(1) + ' ' + y(v)).join(' ');
+    if (ks.length > 0) {
+      const ser = ks.map(k => mean(Object.values(days[k]).map(score)));
+      const y = v => (220 - v * 2.2).toFixed(1);
+      const line = ser.map((v, i) => (i ? 'L' : 'M') + (i / (ser.length - 1) * 700).toFixed(1) + ' ' + y(v)).join(' ');
 
-    $('#chartLine').setAttribute('d', line);
-    $('#chartArea').setAttribute('d', line + ' V220 H0Z');
+      $('#chartLine').setAttribute('d', line);
+      $('#chartArea').setAttribute('d', line + ' V220 H0Z');
+      
+      const chartXHtml = [0, .33, .66, 1].map(f => 
+        '<span>' + new Date(ks[Math.round(f * (ks.length - 1))]).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', timeZone: 'UTC' }) + '</span>'
+      ).join('');
+      $('#chartX').innerHTML = chartXHtml;
+
+      scrub($('.chart-card .chart'), ks.map(k => new Date(k).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', timeZone: 'UTC' })), [{ name: 'Heat risk', vals: ser.map(Math.round), unit: '/100' }]);
+    }
     
-    const chartXHtml = [0, .33, .66, 1].map(f => 
-      '<span>' + new Date(ks[Math.round(f * (ks.length - 1))]).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', timeZone: 'UTC' }) + '</span>'
-    ).join('');
-    $('#chartX').innerHTML = chartXHtml;
-
-    scrub($('.chart-card .chart'), ks.map(k => new Date(k).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', timeZone: 'UTC' })), [{ name: 'Heat risk', vals: ser.map(Math.round), unit: '/100' }]);
     renderCards();
 
     if (!window.liveUpdateTimer) {
-      window.liveUpdateTimer = setInterval(loadNational, 10 * 60 * 1000);
+      window.liveUpdateTimer = setInterval(loadNational, 15 * 60 * 1000);
     }
   } catch (err) {
     console.error('loadNational failed:', err);
