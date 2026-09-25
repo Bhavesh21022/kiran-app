@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="KIRAN early heatwave warning and intelligence" />
+    <title>KIRAN · Climate intelligence</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&family=Raleway:400,400i,700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="styles.css" />
+    <script src="i18n.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-messaging-compat.js"></script>
+  </head>
+  <body>
+    <div class="ambient ambient-one"></div>
+    <div class="ambient ambient-two"></div>
+    
+    <header class="topbar">
+      <button class="brand" data-page="home" aria-label="Go to KIRAN home">
+        <img class="brand-logo" src="assets/kiran-logo.png" alt="KIRAN Climate Intelligence" />
+      </button>
+      
+      <div class="top-actions">
+        <!-- Search Box (Exact same height) -->
+        <form class="search-box" id="searchForm" onsubmit="event.preventDefault();" role="search" aria-label="Search locations">
+          <input type="text" id="globalSearch" placeholder=" " aria-label="Search for a city or location" />
+          <button type="reset" id="searchResetBtn"></button>
+        </form>
+        
+        <!-- Notification Icon (Hidden by default, exact same height) -->
+        <button class="icon-button" id="notificationBtn" style="display:none;" aria-label="Notifications">🔔</button>
+        
+        <!-- Login Button (Exact same height) -->
+        <button class="user-button" id="loginButton" aria-label="Login"><span class="avatar">◯</span><span class="user-name">Sign In</span></button>
+        
+        <!-- Menu Button (Exact same height) -->
+        <button class="menu-button" id="menuToggle" aria-label="Open menu"><span></span><span></span><span></span></button>
+      </div>
+    </header>
+
+    <div class="main-menu-panel" id="mainMenuPanel">
+      <button class="menu-item" data-page="home">Home</button>
+      <button class="menu-item" data-page="alerts">Alerts</button>
+      <button class="menu-item" data-page="precautions">Precautions</button>
+      
+      <div class="settings-section">
+        <h3 class="settings-title">Settings</h3>
+        <button id="themeToggleBtn" class="menu-item">Day/Night Mode</button>
+        <button id="langToggleBtn" class="menu-item">Language (EN/HI)</button>
+      </div>
+    </div>
+
+    <main id="dashboard" class="dashboard">
+      <section class="intro section-pad">
+        <div class="intro-copy">
+          <p class="eyebrow"><span class="live-dot"></span> <span data-i18n="live_label">Live thermal intelligence</span> · <span id="liveDate"></span></p>
+          <div class="sun-hero">
+            <div class="sun-visual" aria-label="Sun visual placeholder"><span></span></div>
+            <div>
+              <p class="greeting" id="greeting">Good afternoon</p>
+              <h1 id="displayName">Guest</h1>
+              <p class="intro-text" data-i18n="tagline">Stay cool. Stay aware.</p>
+            </div>
+          </div>
+        </div>
+        <div class="intro-actions">
+          <aside class="national-average shell-card">
+            <p class="eyebrow" data-i18n="national_average">National average</p>
+            <strong id="natAvg">–<span>%</span></strong>
+            <small><span data-i18n="india_heatwave_risk">India heatwave risk</span> <i id="natNote">Loading…</i></small>
+          </aside>
+          <button class="action-pill sos-button" id="sosButton">
+            <span class="pulse-ring">!</span>
+            <span>
+              <small data-i18n="sos_small">Emergency support</small>
+              <strong data-i18n="sos_label">SOS</strong>
+            </span>
+            <span>↗</span>
+          </button>
+          <button class="action-pill location-button" id="findMeButton">
+            <span class="action-icon">⌖</span>
+            <span>
+              <small data-i18n="findme_small">Your location</small>
+              <strong data-i18n="findme_label">Find me</strong>
+            </span>
+            <span>↗</span>
+          </button>
+        </div>
+      </section>
+
+      <section class="map-card shell-card" aria-label="Heatwave monitoring map">
+        <div class="map-header">
+          <div><p class="eyebrow" data-i18n="situation_map">Situation map</p><h2><span data-i18n="live_conditions">Live conditions</span> <span class="status-chip">● <span data-i18n="tracking">Tracking</span></span></h2></div>
+          <div class="map-controls"><button class="map-control active" data-layer="all" data-i18n="map_all">All</button><button class="map-control" data-layer="alerts" data-i18n="map_alerts">Alerts</button><button class="map-control" data-layer="risk" data-i18n="map_risk">Risk</button><button class="map-control" id="zoomIn" aria-label="Zoom in">＋</button><button class="map-control" id="zoomOut" aria-label="Zoom out">−</button></div>
+        </div>
+        <div class="map-tools"><button class="map-control active" data-base="normal" data-i18n="map_normal">Normal</button><button class="map-control" data-base="sat" data-i18n="map_sat">Satellite</button><button class="map-control" data-base="dark" data-i18n="map_dark">Dark</button><span class="tool-sep"></span><button class="map-control" data-ov="heat">🌡 <span data-i18n="map_heat">Heat map</span></button><button class="map-control" data-ov="help">✚ <span data-i18n="map_help">Hospitals &amp; water</span></button></div>
+        <div class="map-canvas"><div id="liveMap"></div><div class="heat-bar" id="heatBar" hidden><div class="hb-top"><b id="hbLabel">Now</b><button id="hbNow" type="button">Now</button></div><input type="range" id="hbRange" min="-48" max="48" step="1" value="0" aria-label="Heat time slider" /><div class="hb-scale"><span>0°</span><i></i><span>50°C</span></div></div><div class="map-overlay-note" id="mapNote" data-i18n="loading_signals">Loading live signals…</div><button class="map-expand" id="mapExpand" aria-label="Expand map">⛶</button></div>
+      </section>
+
+      <section class="disaster-section section-pad">
+        <div class="section-heading"><div><p class="eyebrow" data-i18n="monitor_by">Monitor by heat type</p><h2 data-i18n="heat_signals">Heatwave signals</h2></div><button class="text-button" id="showAllDisastersBtn" data-page="alerts"><span data-i18n="show_all">Show all</span> <span>↗</span></button></div>
+        <div class="disaster-grid" id="disasterGrid"></div>
+      </section>
+
+      <section class="risk-section section-pad">
+        <div class="section-heading"><div><p class="eyebrow" data-i18n="live_risk">Live risk (Top 7 India)</p><h2 data-i18n="heat_by_place">Highest heatwave risk cities</h2></div><button class="text-button" id="exploreSignalsBtn1" data-page="alerts"><span data-i18n="explore_signals">Explore signals</span> <span>↗</span></button></div>
+        <div class="risk-card-row" id="riskRow"></div>
+      </section>
+
+      <section class="data-grid section-pad">
+        <article class="chart-card shell-card">
+          <div class="section-heading"><div><p class="eyebrow" data-i18n="risk_activity">Risk activity · India</p><h2 data-i18n="signals_over_time">Signals over time</h2></div><button class="select-button"><span data-i18n="last_30">Last 30 days</span>⌄</button></div>
+          <div class="chart-wrap"><div class="chart-y"><span>100</span><span>75</span><span>50</span><span>25</span><span>0</span></div><svg class="chart" viewBox="0 0 700 220" preserveAspectRatio="none" aria-label="Risk activity graph"><defs><linearGradient id="chartFill" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#5b65f5" stop-opacity=".28"/><stop offset="1" stop-color="#5b65f5" stop-opacity="0"/></linearGradient></defs><path id="chartArea" class="chart-area" d=""/><path id="chartLine" class="chart-line" d=""/></svg></div>
+          <div class="chart-x" id="chartX"></div>
+        </article>
+        <aside class="score-card shell-card" id="scoreCard"><p class="eyebrow" data-i18n="current_city_score">Current city score</p><p data-i18n="loading">Loading…</p></aside>
+      </section>
+
+      <section class="ai-section section-pad"><div class="ai-card shell-card" id="aiCard"><p class="eyebrow">KIRAN AI</p><p data-i18n="loading">Loading…</p></div></section>
+
+      <section class="subscription-section section-pad">
+        <div class="subscription-card shell-card" id="subscriptionCard"><div><p class="eyebrow" data-i18n="early_warning_personal">Early warning, made personal</p><h2 data-i18n="get_alerts">Get heatwave alerts.</h2><p data-i18n="get_alerts_desc">Receive a calm, useful signal for the places that matter to you.</p></div><form id="subscriptionForm" class="subscription-form"><label><span data-i18n="email">Email</span><input type="email" name="email" placeholder="you@example.com" required /></label><label><span data-i18n="phone">Phone</span><input type="tel" name="phone" placeholder="+91 00000 00000" pattern="\+?[0-9 ]{10,15}" title="Enter a valid phone number" required /></label><label><span data-i18n="city_area">City / area code</span><input name="area" placeholder="Vadodara" required /></label><button class="full-button" type="submit"><span data-i18n="continue_verify">Continue to verification</span> <span>↗</span></button></form></div>
+      </section>
+
+      <section class="precautions-section section-pad">
+        <div class="precautions-card shell-card"><div class="section-heading"><div><p class="eyebrow" data-i18n="precautions_h">Heatwave precautions</p><h2 data-i18n="small_actions">Small actions. Real protection.</h2></div><span class="precaution-badge" data-i18n="preparedness_guide">Preparedness guide</span></div><div class="precautions-grid"><div><strong data-i18n="prec.before.t">Before heatwave</strong><p data-i18n="prec.before.d">Plan shade, water, and check-ins before temperatures rise.</p></div><div><strong data-i18n="prec.during.t">During extreme heat</strong><p data-i18n="prec.during.d">Stay cool indoors, avoid the afternoon sun, and slow down.</p></div><div><strong data-i18n="prec.hydration.t">Hydration</strong><p data-i18n="prec.hydration.d">Drink often. Do not wait until you feel thirsty.</p></div><div><strong data-i18n="prec.signs.t">Signs of heat stress</strong><p data-i18n="prec.signs.d">Dizziness, confusion, cramps, or nausea need immediate attention.</p></div><div><strong data-i18n="prec.vulnerable.t">Children & elderly</strong><p data-i18n="prec.vulnerable.d">Check on people more vulnerable to heat every few hours.</p></div><div><strong data-i18n="prec.emergency.t">Emergency action</strong><p data-i18n="prec.emergency.d">Move to shade, cool the body, and contact emergency services.</p></div></div></div>
+      </section>
+
+      <section class="insights-grid section-pad">
+        <article class="insight-card shell-card"><span class="insight-number">01</span><div><p class="eyebrow" data-i18n="humidity_h">Humidity &amp; heat stress</p><h3 data-i18n="humidity_title">Why humid heat feels heavier.</h3><p data-i18n="humidity_desc">When humidity rises, sweat cannot evaporate and the body cannot cool itself. Above about 60% humidity, 35°C can feel like 45°C.</p><p class="hum-now" id="humNow"></p><button class="text-button" id="learnHumidityBtn" data-page="precautions"><span data-i18n="learn_humidity">Learn about humidity</span> ↗</button></div></article>
+      </section>
+    </main>
+
+    <footer class="footer section-pad"><div class="footer-brand"><img class="footer-logo" src="assets/kiran-logo.png" alt="KIRAN" /><p data-i18n="footer_tag">Clear signals for a changing world.</p></div><div><p class="eyebrow" data-i18n="explore">Explore</p><button data-page="about" data-i18n="nav.about">About</button><button data-page="how-to-use" data-i18n="how_to_use">How to use</button><button data-page="precautions" data-i18n="precautions_h">Precautions</button></div><div><p class="eyebrow" data-i18n="connect">Connect</p>
+      <a href="https://instagram.com/bhaveshgehlot21" target="_blank" style="display:block; color:var(--muted); font-size:12px; margin:9px 0; text-decoration:none;">Instagram ↗</a>
+      <a href="tel:+917203851404" style="display:block; color:var(--muted); font-size:12px; margin:9px 0; text-decoration:none;">Contact us ↗</a>
+      <button data-page="privacy" data-i18n="privacy">Privacy ↗</button>
+    </div><small class="copyright" data-i18n="copyright">© 2026 KIRAN · Built for safer tomorrows</small></footer>
+
+    <div class="page-panel" id="pagePanel" aria-hidden="true"><div class="page-panel-inner" id="pagePanelContent"></div></div>
+    <button class="floating-action emergency-float" id="emergencyAlertsButton" aria-label="Emergency alerts" title="Emergency alerts"><span aria-hidden="true">✚</span></button>
+    <button class="floating-action chatbot-float" id="chatbotButton" aria-label="AI assistant" title="AI assistant"><span aria-hidden="true">⟡</span></button>
+    <div class="toast" id="toast" role="status"></div>
+    
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="app.js"></script>
+    <script src="hazards.js"></script>
+    <script src="live.js"></script>
+  </body>
+</html>
