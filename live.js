@@ -169,9 +169,6 @@ function openAlerts() {
 /* ---------- live dashboard ---------- */
 let nationalLoading = false;
 
-/* ---------- live dashboard ---------- */
-let nationalLoading = false;
-
 async function loadNational() {
   if (nationalLoading) return;
   nationalLoading = true;
@@ -288,7 +285,6 @@ async function loadNational() {
     nationalLoading = false;
   }
 }
-
 /* ---------- 16-hazard grid ---------- */
 function renderCards() {
   $('#disasterGrid').innerHTML = HZ.LIST.map(h => {
