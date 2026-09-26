@@ -190,6 +190,7 @@ function drawAlerts() {
 }
 
 function openAlerts() {
+  if (typeof updateBottomNav === 'function') updateBottomNav('alerts');
   const by = l => alerts.filter(a => a.lvl === l);
   openPanel(`<p class="panel-kicker">Heatwave · worldwide · live</p><h2>Heat alerts.</h2><p class="panel-lead">Heat events reported by NASA EONET, plus KIRAN's own 7-day early-warning alerts for 24 watch cities across India and the world. Red / Orange / Yellow are KIRAN estimates, not official warnings.</p>` +
     (alerts.length ? ['red', 'orange', 'yellow'].map(l => `<h3 style="color:${AC[l]};margin:34px 0 0">● ${l.toUpperCase()} (${by(l).length})</h3><div class="panel-grid" style="margin-top:14px">${by(l).slice(0, 12).map(a => `<button class="panel-tile al-tile" data-id="${esc(a.id)}" style="border-left:4px solid ${AC[l]}"><h3>${esc(a.title)}</h3><p>${esc(a.catName)} ·${a.date.slice(0, 10)} · tap to see on map</p></button>`).join('') || '<p class="panel-lead">None right now.</p>'}</div>`).join('') : '<p class="panel-lead">Alerts are loading, or NASA EONET could not be reached.</p>'));

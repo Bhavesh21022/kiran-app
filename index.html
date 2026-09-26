@@ -47,6 +47,7 @@
       <button class="menu-item" data-page="home">Home</button>
       <button class="menu-item" data-page="alerts">Alerts</button>
       <button class="menu-item" data-page="precautions">Precautions</button>
+      <button class="menu-item" id="menuFetchUserDataBtn" onclick="fetchUserData()">Fetch User Data</button>
       
       <div class="settings-section">
         <h3 class="settings-title">Settings</h3>
@@ -125,7 +126,7 @@
 
       <section class="subscription-section section-pad">
         <div id="recaptcha-container"></div>
-        <div class="subscription-card shell-card" id="subscriptionCard"><div><p class="eyebrow" data-i18n="early_warning_personal">Early warning, made personal</p><h2 data-i18n="get_alerts">Get heatwave alerts.</h2><p data-i18n="get_alerts_desc">Receive a calm, useful signal for the places that matter to you.</p></div><form id="subscriptionForm" class="subscription-form"><label><span data-i18n="email">Email</span><input type="email" name="email" placeholder="you@example.com" required /></label><label><span data-i18n="phone">Phone</span><input type="tel" name="phone" placeholder="+91 00000 00000" pattern="\+?[0-9 ]{10,15}" title="Enter a valid phone number" required /></label><label><span data-i18n="city_area">City / area code</span><input name="area" placeholder="Vadodara" required /></label><button class="full-button" type="submit"><span data-i18n="continue_verify">Continue to verification</span> <span>↗</span></button></form></div>
+        <div class="subscription-card shell-card" id="subscriptionCard"><div><p class="eyebrow" data-i18n="early_warning_personal">Early warning, made personal</p><h2 data-i18n="get_alerts">Get heatwave alerts.</h2><p data-i18n="get_alerts_desc">Receive a calm, useful signal for the places that matter to you.</p></div><form id="subscriptionForm" class="subscription-form"><label><span data-i18n="email">Email</span><input type="email" name="email" placeholder="you@example.com" required /></label><label><span data-i18n="phone">Phone</span><input type="tel" name="phone" placeholder="+91 00000 00000" pattern="\+?[0-9 ]{10,15}" title="Enter a valid phone number" required /></label><label><span data-i18n="city_area">City / area code</span><input name="area" placeholder="Vadodara" required /></label><button class="full-button submit-save-button" type="submit" id="submitSaveBtn" data-testid="submit-save-btn" aria-label="Submit / Save"><span data-i18n="continue_verify">Submit / Save</span> <span>↗</span></button></form></div>
       </section>
 
       <section class="precautions-section section-pad">
@@ -146,6 +147,28 @@
     <div class="page-panel" id="pagePanel" aria-hidden="true"><div class="page-panel-inner" id="pagePanelContent"></div></div>
     <button class="floating-action emergency-float" id="emergencyAlertsButton" aria-label="Emergency alerts" title="Emergency alerts"><span aria-hidden="true">✚</span></button>
     <button class="floating-action chatbot-float" id="chatbotButton" aria-label="AI assistant" title="AI assistant"><span aria-hidden="true">⟡</span></button>
+    <nav class="bottom-nav" id="bottomNav" aria-label="Bottom Navigation">
+      <button class="bottom-nav-item active" data-tab="home" data-page="home" aria-label="Home" role="tab" aria-selected="true">
+        <span class="nav-icon" aria-hidden="true">🏠</span>
+        <span class="nav-label" data-i18n="nav.home">Home</span>
+      </button>
+      <button class="bottom-nav-item" data-tab="alerts" data-page="alerts" aria-label="Alerts" role="tab" aria-selected="false">
+        <span class="nav-icon" aria-hidden="true">🔔</span>
+        <span class="nav-label" data-i18n="nav.alerts">Alerts</span>
+      </button>
+      <button class="bottom-nav-item" data-tab="precautions" data-page="precautions" aria-label="Precautions" role="tab" aria-selected="false">
+        <span class="nav-icon" aria-hidden="true">🛡️</span>
+        <span class="nav-label" data-i18n="nav.precautions">Precautions</span>
+      </button>
+      <button class="bottom-nav-item" data-tab="emergency" data-page="emergency" aria-label="Emergency" role="tab" aria-selected="false">
+        <span class="nav-icon" aria-hidden="true">🚨</span>
+        <span class="nav-label" data-i18n="nav.emergency">Emergency</span>
+      </button>
+      <button class="bottom-nav-item" data-tab="about" data-page="about" aria-label="About" role="tab" aria-selected="false">
+        <span class="nav-icon" aria-hidden="true">ℹ️</span>
+        <span class="nav-label" data-i18n="nav.about">About</span>
+      </button>
+    </nav>
     <div class="toast" id="toast" role="status"></div>
     
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>

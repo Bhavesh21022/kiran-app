@@ -19,7 +19,7 @@
 
   const T = {
     en: {
-      nav: { home: 'Home', alerts: 'Alerts', modelPerformance: 'Model performance', history: 'History', settings: 'Settings', about: 'About' },
+      nav: { home: 'Home', alerts: 'Alerts', precautions: 'Precautions', emergency: 'Emergency', modelPerformance: 'Model performance', history: 'History', settings: 'Settings', about: 'About' },
       search_ph: 'Search city, state or country',
       live_label: 'Live thermal intelligence',
       greeting: { morning: 'Good morning', afternoon: 'Good afternoon', evening: 'Good evening', night: 'Good night' },
@@ -35,7 +35,7 @@
       risk_activity: 'Risk activity · India', signals_over_time: 'Signals over time', last_30: 'Last 30 days',
       current_city_score: 'Current city score', loading: 'Loading…', kiran_ai: 'KIRAN AI',
       early_warning_personal: 'Early warning, made personal', get_alerts: 'Get heatwave alerts.', get_alerts_desc: 'Receive a calm, useful signal for the places that matter to you.',
-      email: 'Email', phone: 'Phone', city_area: 'City / area code', continue_verify: 'Continue to verification',
+      email: 'Email', phone: 'Phone', city_area: 'City / area code', continue_verify: 'Submit / Save',
       precautions_h: 'Heatwave precautions', small_actions: 'Small actions. Real protection.', preparedness_guide: 'Preparedness guide',
       prec: prec(
         { t: 'Before heatwave', d: 'Plan shade, drinking water, light clothing, and check-ins before temperatures rise. Charge your phone and keep medicines ready.' },
@@ -81,7 +81,7 @@
     },
 
     hi: {
-      nav: { home: 'होम', alerts: 'चेतावनी', modelPerformance: 'मॉडल प्रदर्शन', history: 'इतिहास', settings: 'सेटिंग्स', about: 'बारे में' },
+      nav: { home: 'होम', alerts: 'चेतावनी', precautions: 'सावधानियां', emergency: 'आपातकाल', modelPerformance: 'मॉडल प्रदर्शन', history: 'इतिहास', settings: 'सेटिंग्स', about: 'बारे में' },
       search_ph: 'शहर, राज्य या देश खोजें',
       live_label: 'लाइव ताप जानकारी',
       greeting: { morning: 'सुप्रभात', afternoon: 'नमस्ते', evening: 'शुभ संध्या', night: 'शुभ रात्रि' },
@@ -143,7 +143,7 @@
     },
 
     gu: {
-      nav: { home: 'હોમ', alerts: 'ચેતવણી', modelPerformance: 'મોડલ કામગીરી', history: 'ઇતિહાસ', settings: 'સેટિંગ્સ', about: 'વિશે' },
+      nav: { home: 'હોમ', alerts: 'ચેતવણી', precautions: 'સાવચેતીઓ', emergency: 'કટોકટી', modelPerformance: 'મોડલ કામગીરી', history: 'ઇતિહાસ', settings: 'સેટિંગ્સ', about: 'વિશે' },
       search_ph: 'શહેર, રાજ્ય અથવા દેશ શોધો',
       live_label: 'લાઇવ ગરમી માહિતી',
       greeting: { morning: 'સુપ્રભાત', afternoon: 'નમસ્તે', evening: 'શુભ સાંજ', night: 'શુભ રાત્રિ' },
@@ -205,7 +205,7 @@
     },
 
     ta: {
-      nav: { home: 'முகப்பு', alerts: 'எச்சரிக்கைகள்', modelPerformance: 'மாதிரி செயல்திறன்', history: 'வரலாறு', settings: 'அமைப்புகள்', about: 'பற்றி' },
+      nav: { home: 'முகப்பு', alerts: 'எச்சரிக்கைகள்', precautions: 'முன்னெச்சரிக்கைகள்', emergency: 'அவசரம்', modelPerformance: 'மாதிரி செயல்திறன்', history: 'வரலாறு', settings: 'அமைப்புகள்', about: 'பற்றி' },
       search_ph: 'நகரம், மாநிலம் அல்லது நாட்டைத் தேடுங்கள்',
       live_label: 'நேரடி வெப்ப தகவல்',
       greeting: { morning: 'காலை வணக்கம்', afternoon: 'வணக்கம்', evening: 'மாலை வணக்கம்', night: 'இனிய இரவு' },

@@ -1,0 +1,24 @@
+{
+  "sqliVulnerable": false,
+  "sqliTestDetails": [
+    {
+      "payload": {
+        "email": "admin' OR '1'='1",
+        "pass": "password' OR '1'='1"
+      },
+      "error": ""
+    },
+    {
+      "payload": {
+        "email": "test@example.com' UNION SELECT 1,2,3--",
+        "pass": "' OR 1=1#"
+      },
+      "error": ""
+    }
+  ],
+  "bruteForceClientRateLimit": true,
+  "bruteForceServerResponse": null,
+  "sensitiveFileExposed": false,
+  "sensitiveFilePath": null,
+  "findings": []
+}
