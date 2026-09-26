@@ -33,13 +33,32 @@ let currentUserObj = null;
 let locationTrackerInterval = null;
 
 const greeting = document.getElementById('greeting');
+const sunVisual = document.querySelector('.sun-visual');
+
+// 4 time bands: night (8pm-5am), morning (5am-12pm), afternoon (12pm-5pm), evening (5pm-8pm)
+function getTimeBand(hour) {
+  if (hour >= 5 && hour < 12) return 'morning';
+  if (hour >= 12 && hour < 17) return 'afternoon';
+  if (hour >= 17 && hour < 20) return 'evening';
+  return 'night';
+}
+
 function paintGreeting() {
-  if (!greeting) return;
   const hour = new Date().getHours();
-  greeting.textContent = hour < 12 ? I18N.t('greeting.morning') : hour < 18 ? I18N.t('greeting.afternoon') : I18N.t('greeting.evening');
+  const band = getTimeBand(hour);
+
+  if (greeting) greeting.textContent = I18N.t(`greeting.${band}`);
+
+  if (sunVisual) {
+    sunVisual.classList.remove('is-morning', 'is-afternoon', 'is-evening', 'is-night');
+    sunVisual.classList.add(`is-${band}`);
+  }
 }
 paintGreeting();
 I18N.onChange(paintGreeting);
+// Keep it live: re-check every minute so the sun/moon and greeting update
+// without needing a page refresh if the app stays open across a time band.
+setInterval(paintGreeting, 60 * 1000);
 
 function showToast(message) {
   toast.textContent = message;
@@ -271,10 +290,18 @@ function renderAuthPanel() {
     btn.disabled = true;
 
     if (isSignUpMode) {
-      const name = document.getElementById('authName').value;
+      const name = document.getElementById('authName').value.trim();
       auth.createUserWithEmailAndPassword(email, pass).then(res => {
-        // Update profile with name
-        return res.user.updateProfile({ displayName: name }).then(() => saveUserToDB(res.user));
+        // Update profile with name FIRST, then force the UI to reflect it
+        // immediately — onAuthStateChanged can fire before updateProfile()
+        // finishes, which used to show the email-derived name instead.
+        return res.user.updateProfile({ displayName: name }).then(() => {
+          currentUserObj = res.user;
+          const loginButton = document.getElementById('loginButton');
+          document.getElementById('displayName').textContent = name;
+          if (loginButton) loginButton.innerHTML = `<span class="avatar">${name[0].toUpperCase()}</span><span class="user-name">${name}</span>`;
+          return saveUserToDB(res.user);
+        });
       }).catch(err => { showToast(err.message); btn.textContent = "Sign Up"; btn.disabled = false; });
     } else {
       auth.signInWithEmailAndPassword(email, pass).catch(err => {
@@ -438,18 +465,24 @@ function saveUserLocation(uid) {
 
 
 /* =======================================
-   REAL SUBSCRIPTION FORM SAVE
+   REAL SUBSCRIPTION FORM SAVE + REAL OTP
+   (Firebase Phone Auth sends an actual SMS code and verifies it —
+   no more "any 6 digits work" fake step.)
 ======================================= */
 document.getElementById('subscriptionForm').addEventListener('submit', (event) => {
   event.preventDefault();
   const form = event.currentTarget;
   const email = form.querySelector('input[name="email"]').value;
-  const phone = form.querySelector('input[name="phone"]').value;
+  let phone = form.querySelector('input[name="phone"]').value.trim().replace(/[\s-]/g, '');
   const area = form.querySelector('input[name="area"]').value;
   const S = I18N.T[I18N.lang].subscription;
 
+  // Firebase needs E.164 format (+countrycode number). Default to India (+91)
+  // if the user typed only a local 10-digit number.
+  if (!phone.startsWith('+')) phone = '+91' + phone.replace(/^0+/, '');
+
   form.innerHTML = `<p class="eyebrow">Processing...</p><h3>Saving Data</h3><p class="panel-lead">Please wait.</p>`;
-  
+
   // Save to Firebase Database
   db.collection("subscriptions").add({
     email: email,
@@ -457,16 +490,44 @@ document.getElementById('subscriptionForm').addEventListener('submit', (event) =
     areaCode: area,
     userId: currentUserObj ? currentUserObj.uid : 'guest',
     timestamp: firebase.firestore.FieldValue.serverTimestamp()
-  }).then(() => {
-    form.innerHTML = `<p class="eyebrow">${S.step2_eyebrow}</p><h3>${S.step2_title}</h3><p class="panel-lead">${S.step2_lead}</p><label class="otp-field">${S.otp_label}<input inputmode="numeric" pattern="[0-9]{6}" maxlength="6" placeholder="000000" required /></label><button class="full-button" type="submit">${S.verify_btn} <span>↗</span></button>`;
-    form.addEventListener('submit', (verifyEvent) => { 
-      verifyEvent.preventDefault(); 
-      form.innerHTML = `<p class="eyebrow">${S.step3_eyebrow}</p><h3>${S.step3_title}</h3><p class="panel-lead">${S.step3_lead} (Saved to Database)</p>`; 
-    });
-  }).catch(err => {
+  }).then(() => sendRealOtp(phone, form, S))
+  .catch(err => {
     form.innerHTML = `<p class="eyebrow">Error</p><h3>Failed to subscribe</h3><p class="panel-lead">${err.message}</p>`;
   });
 });
+
+function sendRealOtp(phone, form, S) {
+  form.innerHTML = `<p class="eyebrow">Sending code...</p><h3>One moment</h3><p class="panel-lead">Sending a verification code to ${esc ? esc(phone) : phone}</p>`;
+  try {
+    if (!window.recaptchaVerifier) {
+      window.recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', { size: 'invisible' }, auth);
+    }
+    auth.signInWithPhoneNumber(phone, window.recaptchaVerifier).then(confirmationResult => {
+      window._otpConfirmation = confirmationResult;
+      form.innerHTML = `<p class="eyebrow">${S.step2_eyebrow}</p><h3>${S.step2_title}</h3><p class="panel-lead">${S.step2_lead}</p><label class="otp-field">${S.otp_label}<input inputmode="numeric" pattern="[0-9]{6}" maxlength="6" placeholder="000000" required /></label><button class="full-button" type="submit">${S.verify_btn} <span>↗</span></button><p class="panel-lead" id="otpError" style="color:#c0392b;"></p>`;
+
+      // Replaces any previous submit handler on this form (avoids stacking
+      // multiple listeners if the person subscribes more than once).
+      form.onsubmit = (verifyEvent) => {
+        verifyEvent.preventDefault();
+        const code = form.querySelector('.otp-field input').value.trim();
+        const errorEl = form.querySelector('#otpError');
+        const submitBtn = form.querySelector('button[type="submit"]');
+        submitBtn.disabled = true;
+        window._otpConfirmation.confirm(code).then(() => {
+          form.innerHTML = `<p class="eyebrow">${S.step3_eyebrow}</p><h3>${S.step3_title}</h3><p class="panel-lead">${S.step3_lead} (Verified & saved)</p>`;
+        }).catch(() => {
+          submitBtn.disabled = false;
+          if (errorEl) errorEl.textContent = 'Incorrect or expired code. Please try again.';
+        });
+      };
+    }).catch(err => {
+      form.innerHTML = `<p class="eyebrow">Error</p><h3>Could not send code</h3><p class="panel-lead">${err.message || 'Check the phone number and try again.'}</p>`;
+    });
+  } catch (err) {
+    form.innerHTML = `<p class="eyebrow">Error</p><h3>OTP setup failed</h3><p class="panel-lead">${err.message}</p>`;
+  }
+}
 
 
 /* =======================================

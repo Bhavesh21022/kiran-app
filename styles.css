@@ -107,8 +107,21 @@ button { cursor: pointer; border: 0; color: inherit; background: none; }
 .intro { padding-top: 68px; display: flex; justify-content: space-between; align-items: center; gap: 30px; }
 .sun-hero { display: flex; align-items: center; gap: 28px; }
 .sun-hero > div:last-child { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; min-width: 0; }
-.sun-visual { width: 128px; height: 128px; border-radius: 50%; display: grid; place-items: center; background: radial-gradient(circle at 35% 30%, #fffad1 0 11%, var(--laser-lemon) 36%, var(--atomic-orange) 100%); box-shadow: 0 0 0 16px rgba(255, 211, 78, .12), 0 18px 45px rgba(242, 123, 56, .24); }
-.sun-visual span { width: 72%; height: 72%; border-radius: 50%; border: 1px solid rgba(255,255,255,.5); }
+.sun-visual { width: 128px; height: 128px; border-radius: 50%; display: grid; place-items: center; background: radial-gradient(circle at 35% 30%, #fffad1 0 11%, var(--laser-lemon) 36%, var(--atomic-orange) 100%); box-shadow: 0 0 0 16px rgba(255, 211, 78, .12), 0 18px 45px rgba(242, 123, 56, .24); transition: background .6s ease, box-shadow .6s ease; }
+.sun-visual span { width: 72%; height: 72%; border-radius: 50%; border: 1px solid rgba(255,255,255,.5); transition: background .6s ease, box-shadow .6s ease; }
+
+/* Morning: soft pale-gold sunrise */
+.sun-visual.is-morning { background: radial-gradient(circle at 35% 30%, #fff9e0 0 11%, #ffe9a8 36%, #ffb454 100%); box-shadow: 0 0 0 16px rgba(255, 214, 130, .14), 0 18px 45px rgba(255, 170, 80, .22); }
+
+/* Afternoon: bright sun (existing look) */
+.sun-visual.is-afternoon { background: radial-gradient(circle at 35% 30%, #fffad1 0 11%, var(--laser-lemon) 36%, var(--atomic-orange) 100%); box-shadow: 0 0 0 16px rgba(255, 211, 78, .12), 0 18px 45px rgba(242, 123, 56, .24); }
+
+/* Evening: warm orange sunset */
+.sun-visual.is-evening { background: radial-gradient(circle at 35% 30%, #ffe3b0 0 11%, #ff8a4c 36%, #c9425a 100%); box-shadow: 0 0 0 16px rgba(255, 140, 90, .16), 0 18px 45px rgba(190, 70, 90, .28); }
+
+/* Night: cool moon with craters */
+.sun-visual.is-night { background: radial-gradient(circle at 32% 28%, #f4f6ff 0 8%, #cfd6ea 30%, #6b7597 70%, #384063 100%); box-shadow: 0 0 0 16px rgba(120, 140, 200, .14), 0 18px 45px rgba(20, 25, 55, .35); }
+.sun-visual.is-night span { background: radial-gradient(circle at 60% 65%, rgba(0,0,0,.18) 0 10%, transparent 12%), radial-gradient(circle at 30% 40%, rgba(0,0,0,.14) 0 8%, transparent 10%), radial-gradient(circle at 55% 30%, rgba(0,0,0,.12) 0 6%, transparent 8%); border-color: rgba(255,255,255,.25); }
 .greeting { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.35; }
 .intro h1 { color: var(--ink); font-size: clamp(38px, 5vw, 64px); line-height: 1.05; margin: 0; letter-spacing: -.07em; font-weight: 700; }
 .intro h1 em { font-style: normal; color: var(--accent); }

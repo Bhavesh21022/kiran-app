@@ -9,15 +9,52 @@ const mean = a => a.reduce((x, y) => x + y, 0) / (a.length || 1);
 /* ---------- API PROTECTION & CACHING ---------- */
 const API_CACHE = new Map();
 const API_INFLIGHT = new Map();
-let API_COOLDOWN_UNTIL = 0;
+const LS_PREFIX = 'kiranApiCache:';
+const LS_COOLDOWN_KEY = 'kiranApiCooldownUntil';
 
-async function getJSON(u, ttl = 5 * 60 * 1000) {
+// Persistent (localStorage) cache helpers so repeated page reloads don't
+// re-hit rate-limited APIs. All access is guarded: localStorage can throw
+// in private/incognito mode or when full, and that must never break the app.
+function lsGet(key) {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+}
+function lsSet(key, value) {
+  try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* ignore quota/private-mode errors */ }
+}
+
+function getCooldownUntil() {
+  const v = Number(lsGet(LS_COOLDOWN_KEY));
+  return Number.isFinite(v) ? v : 0;
+}
+function setCooldownUntil(ts) {
+  lsSet(LS_COOLDOWN_KEY, ts);
+}
+
+async function getJSON(u, ttl = 30 * 60 * 1000) {
   const now = Date.now();
+
+  // 1) In-memory cache (fastest, survives within this page session)
   const cached = API_CACHE.get(u);
   if (cached && now - cached.t < ttl) return cached.data;
 
-  if (now < API_COOLDOWN_UNTIL) {
-    const secondsLeft = Math.ceil((API_COOLDOWN_UNTIL - now) / 1000);
+  // 2) Persistent cache (survives page reloads/new tabs on this device)
+  const lsCached = lsGet(LS_PREFIX + u);
+  if (lsCached && now - lsCached.t < ttl) {
+    API_CACHE.set(u, lsCached);
+    return lsCached.data;
+  }
+
+  // 3) Respect an active rate-limit cooldown, persisted so a reload
+  // doesn't immediately re-trigger the same 429.
+  const cooldownUntil = getCooldownUntil();
+  if (now < cooldownUntil) {
+    // If we have any cached copy at all (even stale), prefer serving that
+    // over throwing, so the UI doesn't break during a cooldown window.
+    if (lsCached) return lsCached.data;
+    const secondsLeft = Math.ceil((cooldownUntil - now) / 1000);
     throw new Error(`429 cooldown ${secondsLeft}s`);
   }
 
@@ -28,12 +65,16 @@ async function getJSON(u, ttl = 5 * 60 * 1000) {
       const r = await fetch(u);
       if (r.status === 429) {
         const retryAfter = Number(r.headers.get('Retry-After')) || 60;
-        API_COOLDOWN_UNTIL = Date.now() + Math.min(Math.max(retryAfter, 30), 300) * 1000;
+        setCooldownUntil(Date.now() + Math.min(Math.max(retryAfter, 60), 20 * 60) * 1000);
+        // Serve stale cached data during the outage if we have it.
+        if (lsCached) return lsCached.data;
         throw new Error('429');
       }
       if (!r.ok) throw new Error(String(r.status));
       const data = await r.json();
-      API_CACHE.set(u, { t: Date.now(), data });
+      const entry = { t: Date.now(), data };
+      API_CACHE.set(u, entry);
+      lsSet(LS_PREFIX + u, entry);
       return data;
     } finally {
       API_INFLIGHT.delete(u);
@@ -180,10 +221,11 @@ async function loadNational() {
       ds = await getJSON(url, 15 * 60 * 1000);
     } catch (apiErr) {
       console.warn("Open-Meteo rate limit hit in loadNational. Using safe fallback data.");
-      // Fallback dummy/cached structure so the app doesn't break
-      $('#natNote').textContent = 'Live data (Cached / Offline Mode)';
-      nationalLoading = false;
-      return;
+      $('#natNote').textContent = 'Live data unavailable — showing placeholder values';
+      // Empty per-city objects so every field below falls through to its
+      // own built-in default (see the `|| [defaults]` and `?? default`
+      // fallbacks a few lines down) instead of leaving the dashboard blank.
+      ds = CITIES.map(() => ({}));
     }
 
     cs = CITIES.map((c, i) => {
@@ -274,10 +316,6 @@ async function loadNational() {
     }
     
     renderCards();
-
-    if (!window.liveUpdateTimer) {
-      window.liveUpdateTimer = setInterval(loadNational, 15 * 60 * 1000);
-    }
   } catch (err) {
     console.error('loadNational failed:', err);
     $('#natNote').textContent = 'Live data unavailable';
@@ -720,6 +758,15 @@ setCity(
   cur.lat,
   cur.lon
 );
+
+// This call was missing — without it, national average / risk cards /
+// chart never loaded at all, regardless of the Open-Meteo API's status.
+// Scheduled unconditionally (not just on success) so it keeps retrying
+// every 15 min even if the very first attempt hits a 429.
+loadNational().catch(() => { $('#natNote').textContent = 'Live data unavailable'; });
+if (!window.liveUpdateTimer) {
+  window.liveUpdateTimer = setInterval(loadNational, 15 * 60 * 1000);
+}
 
 I18N.onChange(() => renderCards());
 

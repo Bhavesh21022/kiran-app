@@ -16,7 +16,13 @@ HZ.mk = (hazard, score, prob, confidence, ts, freshness, alert, source, factors,
   officialAlert: alert, officialAlertSource: source, mainFactors: factors, recommendation: rec, modelVersion: '2.0.0-heat', needsAPI: needsAPI || [], fieldSrc: fieldSrc || {} });
 const nowISO = () => new Date().toISOString();
 const OM = 'https://api.open-meteo.com/v1/forecast', OM_AQ = 'https://air-quality-api.open-meteo.com/v1/air-quality';
-const jget = async u => { const r = await fetch(u); if (!r.ok) throw new Error(r.status); return r.json(); };
+// Route through live.js's shared getJSON() when it's available: that gives
+// every Open-Meteo call a persistent (localStorage) cache AND a 429
+// cooldown, so this file stops hammering the API with its own raw fetch().
+// 30-minute cache: heat/weather forecasts don't meaningfully change faster.
+const jget = async u => (typeof getJSON === 'function'
+  ? getJSON(u, 30 * 60 * 1000)
+  : (async () => { const r = await fetch(u); if (!r.ok) throw new Error(r.status); return r.json(); })());
 const fs = (live, ph = []) => Object.assign(Object.fromEntries(live.map(k => [k, 'LIVE (Open-Meteo)'])), Object.fromEntries(ph.map(k => [k, 'PLACEHOLDER'])));
 const CLIM = 'Climatology API (Open-Meteo Historical / ERA5) for true local heatwave thresholds';
 const OFFICIAL = 'Official heat-alert feed (IMD / NWS / MeteoAlarm / WMO Alert Hub)';
